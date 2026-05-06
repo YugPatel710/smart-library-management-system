@@ -112,7 +112,7 @@ Architecture details are explained in the project report. :contentReference[oaic
 - Google Colab
 
 ---
-<img width="1200" height="1600" alt="WhatsApp Image 2026-04-30 at 12 25 25 PM" src="https://github.com/user-attachments/assets/124a4a9d-20f6-44a5-927a-1e70c40fede8" />
+<img width="120" height="160" alt="WhatsApp Image 2026-04-30 at 12 25 25 PM" src="https://github.com/user-attachments/assets/124a4a9d-20f6-44a5-927a-1e70c40fede8" />
 
 # 📂 Project Structure
 
