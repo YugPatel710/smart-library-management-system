@@ -1,5 +1,3 @@
-# smart-library-management-system
-AI-powered Smart Library Management System using YOLO, OCR, RFID, Flask and Web Technologies.
 # 📚 Smart Library Management System
 
 An AI-powered Smart Library Management System that combines RFID technology, YOLOv8 object detection, OCR, and web technologies to automate book identification and misplaced book detection in libraries.
