@@ -1,4 +1,4 @@
-# 📚 Smart Library Management System
+<img width="1200" height="1600" alt="WhatsApp Image 2026-04-30 at 12 25 25 PM" src="https://github.com/user-attachments/assets/e917d507-767a-4ee7-8667-fb15a7be9b3c" /># 📚 Smart Library Management System
 
 An AI-powered Smart Library Management System that combines RFID technology, YOLOv8 object detection, OCR, and web technologies to automate book identification and misplaced book detection in libraries.
 
@@ -112,6 +112,7 @@ Architecture details are explained in the project report. :contentReference[oaic
 - Google Colab
 
 ---
+<img width="1200" height="1600" alt="WhatsApp Image 2026-04-30 at 12 25 25 PM" src="https://github.com/user-attachments/assets/124a4a9d-20f6-44a5-927a-1e70c40fede8" />
 
 # 📂 Project Structure
 
