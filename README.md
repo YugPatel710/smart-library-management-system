@@ -20,15 +20,6 @@
 
 > Developed as a multidisciplinary engineering project combining Artificial Intelligence, Computer Vision, Embedded Systems, Backend Development, and Full-Stack Web Technologies.
 
----
-
-## 🎥 Demo
-
-📹 **Demo Video**
-
-> *(Add your YouTube or Google Drive demo link here)*
-
----
 
 </div>
 
