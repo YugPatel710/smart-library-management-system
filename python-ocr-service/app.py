@@ -25,8 +25,8 @@ from model import process_image
 
 app = Flask(__name__)
 
-# ✅ FIX: store full object (NOT only UID)
-last_rfid = {}
+# 🔥 ADD (for frontend live RFID)
+last_rfid = None
 
 # ── CORS ─────────────────────────────────────────
 CORS(app, resources={r"/*": {"origins": "*"}},
@@ -36,18 +36,43 @@ CORS(app, resources={r"/*": {"origins": "*"}},
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# ── SUBJECT MAP ──────────────────────────────────
+# ── FULL SUBJECT MAP ─────────────────────────────
 SUBJECT_MAP = {
     "Mathematics": ("Rack-1", "A1"),
     "Physics": ("Rack-2", "A2"),
     "Chemistry (B.Sc)": ("Rack-3", "A3"),
+    "chemistry (B.Sc)": ("Rack-3", "A3"),
+    "Chemistry (M.Sc)": ("Rack-3", "A3"),
+    "Biotechnology (B.Sc)": ("Rack-4", "B1"),
+    "Biotechnology (M.Sc)": ("Rack-4", "B1"),
+    "B.Sc. (Microbiology)": ("Rack-4", "B1"),
+    "Statistics, Biometry": ("Rack-4", "B1"),
     "Computer Engineering (B.Tech)": ("Rack-5", "B2"),
+    "BCA": ("Rack-5", "B2"),
+    "Bachelor of Computer Application": ("Rack-5", "B2"),
+    "Computer": ("Rack-5", "B2"),
+    "Data Science (B.Sc)": ("Rack-5", "B2"),
+    "B.Sc. (Data Science)": ("Rack-5", "B2"),
+    "Data Science (M.Sc)": ("Rack-5", "B2"),
     "Mechanical Engineering (B.Tech)": ("Rack-6", "B3"),
+    "Chemical Engineering (B.Tech)": ("Rack-7", "C1"),
+    "Civil Engineering (B.Tech)": ("Rack-8", "C2"),
+    "Fire And Environment, Health, Safety (B.Tech)": ("Rack-8", "C2"),
+    "Fire & safety engineering, Hydraulics engineering": ("Rack-8", "C2"),
+    "Fire & safety engineering, Industrial safety, and occupational health and safety": ("Rack-8", "C2"),
     "Management (MBA)": ("Rack-9", "C3"),
+    "Management (BBA)": ("Rack-9", "C3"),
+    "Management (BBA-BA)": ("Rack-9", "C3"),
+    "Management (B com)": ("Rack-9", "C3"),
+    "Management (Bcom)": ("Rack-9", "C3"),
+    "School of Management": ("Rack-9", "C3"),
+    "General Collection": ("Rack-10", "D1"),
     "Soft & Technical Skills": ("Rack-10", "D1"),
+    "Law": ("Rack-10", "D1"),
+    "Start-up (SSIP)": ("Rack-11", "D2"),
 }
 
-# ── LOAD CSV ─────────────────────────────────────
+# ── LOAD BOOKS ───────────────────────────────────
 def load_book_lookup():
     lookup = {}
     here = os.path.dirname(__file__)
@@ -63,101 +88,114 @@ def load_book_lookup():
         print("❌ books.csv not found")
         return lookup
 
-    with open(csv_path, encoding="utf-8-sig", newline="") as f:
-        reader = csv.reader(f)
-        next(reader)
+    try:
+        with open(csv_path, encoding="utf-8-sig", newline="") as f:
+            reader = csv.reader(f)
+            next(reader)
 
-        for row in reader:
-            if not row or not row[0].strip():
-                continue
+            for row in reader:
+                if not row or not row[0].strip():
+                    continue
 
-            uid = row[0].strip().upper()
-            book_no = row[1].strip() if len(row) > 1 else ""
-            title = row[2].strip() if len(row) > 2 else ""
-            author = row[3].strip() if len(row) > 3 else ""
-            subject = row[9].strip() if len(row) > 9 else ""
+                code = row[0].strip().upper()
+                title = row[1].strip() if len(row) > 1 else ""
+                author = row[2].strip() if len(row) > 2 else ""
+                subject = row[9].strip() if len(row) > 9 else ""
 
-            rack, shelf = SUBJECT_MAP.get(subject, ("Rack-1", "A1"))
+                title = re.sub(r'^Normal view MARC view ISBD view\s*', "", title).strip()
 
-            lookup[uid] = {
-                "bookNumber": book_no,
-                "title": title,
-                "author": author,
-                "subject": subject,
-                "rack": rack,
-                "expectedShelf": shelf,
-            }
+                rack, shelf = SUBJECT_MAP.get(subject, ("Rack-1", "A1"))
 
-    print(f"✅ Loaded {len(lookup)} books")
+                lookup[code] = {
+                    "title": title,
+                    "author": author,
+                    "subject": subject,
+                    "rack": rack,
+                    "expectedShelf": shelf,
+                }
+
+        print(f"✅ Loaded {len(lookup)} books")
+
+    except Exception as e:
+        print("❌ CSV ERROR:", e)
+
     return lookup
 
 
 BOOK_LOOKUP = load_book_lookup()
 
 # ── OCR ROUTE ────────────────────────────────────
-@app.route("/process-image", methods=["POST"])
+@app.route("/process-image", methods=["POST", "OPTIONS"])
 def process():
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+
     if "image" not in request.files:
-        return jsonify({"error": "No image file"}), 400
+        return jsonify({"error": "No image file provided"}), 400
 
     file = request.files["image"]
-    path = os.path.join(UPLOAD_FOLDER, file.filename)
+    safe = re.sub(r"[^\w.\-]", "_", file.filename or "upload.jpg")
+    path = os.path.join(UPLOAD_FOLDER, safe)
     file.save(path)
 
     result = process_image(path, BOOK_LOOKUP)
     return jsonify(result)
 
-# ── HEALTH ───────────────────────────────────────
+# ── HEALTH ROUTE ─────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({
         "status": "ok",
-        "books_loaded": len(BOOK_LOOKUP)
+        "books_loaded": len(BOOK_LOOKUP),
+        "version": "v6 + RFID",
     })
 
-# ── RFID MAIN ────────────────────────────────────
+# ── RFID ROUTE ───────────────────────────────────
 @app.route("/rfid", methods=["POST"])
 def receive_rfid():
-    global last_rfid
+    try:
+        global last_rfid
+        data = request.json
+        uid = (data.get("uid") or "").upper()
 
-    data = request.json
-    uid = (data.get("uid") or "").upper()
+        last_rfid = uid  # 🔥 store latest UID
 
-    print("📡 RFID:", uid)
+        print("📡 RFID Card Scanned:", uid)
 
-    if uid in BOOK_LOOKUP:
-        book = BOOK_LOOKUP[uid]
+        if uid in BOOK_LOOKUP:
+            book = BOOK_LOOKUP[uid]
+            print("✅ Book Found:", book["title"])
 
-        last_rfid = {
-            "status": "found",
-            "uid": uid,
-            "book": book
-        }
+            return jsonify({
+                "status": "found",
+                "uid": uid,
+                "book": book
+            })
+        else:
+            print("❌ Unknown RFID")
 
-        print("✅ Found:", book["title"])
+            return jsonify({
+                "status": "not_found",
+                "uid": uid
+            })
 
-        return jsonify(last_rfid)
+    except Exception as e:
+        print("RFID ERROR:", e)
+        return jsonify({"error": str(e)}), 500
 
-    else:
-        last_rfid = {
-            "status": "not_found",
-            "uid": uid
-        }
 
-        print("❌ Unknown")
-
-        return jsonify(last_rfid)
-
-# ── 🔥 FIXED FRONTEND API ────────────────────────
+# 🔥 NEW: FRONTEND LIVE RFID API
 @app.route("/rfid/latest", methods=["GET"])
-def latest():
-    return jsonify(last_rfid)
+def get_latest_rfid():
+    return jsonify({"uid": last_rfid})
 
-# ── RUN ─────────────────────────────────────────
+
+# ── RUN SERVER ───────────────────────────────────
 if __name__ == "__main__":
-    print("="*50)
-    print("🚀 Smart Library Running")
-    print(f"📚 Books: {len(BOOK_LOOKUP)}")
-    print("="*50)
+    print("=" * 60)
+    print("🚀 Smart Library System (OCR + RFID)")
+    print(f"📚 Books Loaded: {len(BOOK_LOOKUP)}")
+    print("🌐 Server ready for ESP32")
+    print("=" * 60)
 
-    app.run(host="0.0.0.0", port=5001)
+    app.run(host="0.0.0.0", port=5001, debug=False)

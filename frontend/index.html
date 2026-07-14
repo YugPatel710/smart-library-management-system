@@ -850,101 +850,62 @@ function renderScan(books, shelf, usedFallback) {
 async function doRfid() {
   const uid   = document.getElementById('r-uid').value.trim().toUpperCase();
   const shelf = document.getElementById('r-shelf').value.trim().toUpperCase();
-
-  if (!uid) {
-    alert('Enter RFID UID');
-    return;
-  }
+  if (!uid) { alert('Enter RFID UID'); return; }
 
   const rd = document.getElementById('rfid-result');
   rd.innerHTML = '<span class="sp"></span> Looking up…';
 
   try {
-    // 🔥 CALL PYTHON
-    const r = await fetch(PYTHON + '/rfid', {
+    const r = await fetch(JAVA + '/rfid/lookup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      mode: 'cors',
       body: JSON.stringify({ uid, shelfId: shelf })
     });
-
     const d = await r.json();
+    renderRfid(d);
 
-    // 🔥 CONVERT PYTHON RESPONSE → OLD FORMAT
-    const mapped = {
-  uid: d.uid,
-  found: d.status === 'found',
-  title: d.book?.title || 'Unknown',
-  author: d.book?.author || 'Unknown',
-  programme: d.book?.subject || 'Unknown',
-  rack: d.book?.rack || '-',
-  expectedShelf: d.book?.expectedShelf || '-',
-  currentShelf: d.shelfId || 'A1',
-  status: d.status === 'found'
-    ? ((d.book?.expectedShelf || '') === (d.shelfId || 'A1') ? 'OK' : 'WRONG')
-    : 'UNKNOWN',
-  bookNumber: d.book?.bookNumber || 'N/A'
-};
-    // ✅ USE YOUR OLD UI SYSTEM
-    renderRfid(mapped);
-
-    if (mapped.found) {
+    if (d.found) {
       pushMis({
-        code: mapped.bookNumber,
-        title: mapped.title,
-        author: mapped.author,
-        subject: mapped.programme,
-        rack: mapped.rack,
-        expectedShelf: mapped.expectedShelf,
-        scannedShelf: mapped.currentShelf,
-        status: mapped.status
+        code: d.bookNumber || d.code,
+        title: d.title, author: d.author,
+        subject: d.programme, rack: d.rack,
+        expectedShelf: d.expectedShelf,
+        scannedShelf: d.currentShelf,
+        status: d.status
       }, 'RFID');
     }
-
     updStats();
-
     const el = document.getElementById('s-scan');
     if (el) el.textContent = 'RFID';
-
-    const st = mapped.found
-      ? (mapped.status === 'OK' ? '✅ OK' : '❌ WRONG')
-      : '⚠️ UNKNOWN';
-
-    log('RFID: ' + uid + ' → ' + st,
-        mapped.found && mapped.status === 'OK' ? 'lok' : 'lwr');
-
+    const st = d.found ? (d.status === 'OK' ? '✅ OK' : '❌ WRONG') : '⚠️ UNKNOWN';
+    log('RFID: ' + uid + ' → ' + st, d.found && d.status === 'OK' ? 'lok' : 'lwr');
     rfidLog(uid, shelf, st);
-
-  } catch (e) {
-    rd.innerHTML = '<div style="color:red">❌ Python server not reachable</div>';
+  } catch {
+    rd.innerHTML = '<div style="color:var(--red);font-size:13px">❌ Java backend offline — is Spring Boot running?</div>';
   }
 }
 
 function renderRfid(d) {
   const div = document.getElementById('rfid-result');
-
   if (!d.found) {
     div.innerHTML =
       '<div class="rcard unk" style="margin-top:14px">' +
       '<div class="rt">⚠️ Not Registered <span class="bdg b-rfid">RFID</span></div>' +
-      '<div class="rm">UID: <strong>' + d.uid + '</strong><br>No RFID sticker assigned yet</div></div>';
+      '<div class="rm">UID: <strong>' + d.uid + '</strong><br>' +
+      'No RFID sticker assigned yet</div></div>';
     return;
   }
-
-  const ok = d.status === 'OK' || d.status === 'found';
-
+  const ok = d.status === 'OK';
   div.innerHTML =
     '<div class="rcard ' + (ok ? 'ok' : 'wrong') + '" style="margin-top:14px">' +
-    '<div class="rt">' +
-    (ok ? '✅' : '❌') + ' ' + d.title +
-    '<span class="bdg ' + (d.status === 'OK' ? 'b-ok' : (d.status === 'WRONG' ? 'b-wr' : 'b-ok')) + '">' +
-    (d.status === 'OK' ? 'CORRECT' : (d.status === 'WRONG' ? 'WRONG SHELF' : 'FOUND')) +
-    '</span>' +
+    '<div class="rt">' + (ok ? '✅' : '❌') + ' ' + d.title +
+    '<span class="bdg ' + (ok ? 'b-ok' : 'b-wr') + '">' + (ok ? 'CORRECT' : 'WRONG SHELF') + '</span>' +
     '<span class="bdg b-rfid">RFID</span></div>' +
-
     '<div class="rm">' +
     'UID: <strong>' + d.uid + '</strong><br>' +
-    'Book #: <strong>' + (d.bookNumber || '-') + '</strong> &nbsp;|&nbsp; Rack: <strong>' + d.rack + '</strong><br>' +
-    (d.author ? 'Author: <strong>' + d.author + '</strong><br>' : '') +
+    'Book #: <strong>' + (d.bookNumber || d.code || '—') + '</strong> &nbsp;|&nbsp; Rack: <strong>' + d.rack + '</strong><br>' +
+    (d.author    ? 'Author: <strong>' + d.author + '</strong><br>' : '') +
     (d.programme ? 'Programme: <strong>' + d.programme + '</strong><br>' : '') +
     'Expected: <strong style="color:var(--green)">' + d.expectedShelf + '</strong>' +
     ' &nbsp;|&nbsp; Scanned: <strong style="color:' + (ok ? 'var(--green)' : 'var(--red)') + '">' + d.currentShelf + '</strong>' +
