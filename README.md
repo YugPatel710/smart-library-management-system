@@ -399,17 +399,6 @@ Perhaps the biggest takeaway was that building a reliable AI application is not 
 
 ---
 
-# 👨‍💻 Contributors
-
-| Team Member | Contribution |
-|--------------|-------------|
-| **Yug Patel** | YOLO model development, ESP32, RFID integration, AI pipeline, system debugging |
-| **Rahi** | OCR pipeline, Flask backend, OpenCV preprocessing, backend integration |
-| **Yashvi** | UI/UX design, project documentation, reports, knowledge product |
-| **Harsh** | Database design and management |
-
----
-
 # 🙏 Acknowledgements
 
 This project was developed as a collaborative academic project with the objective of applying Artificial Intelligence and Embedded Systems to solve real-world library management challenges.
